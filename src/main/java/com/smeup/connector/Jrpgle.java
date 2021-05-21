@@ -23,22 +23,28 @@ public class Jrpgle {
 		((JavaSystemInterface) systemInterface).addJavaInteropPackage(javaInteropPackage);
 		rpgDir = new File(rpgDirectory.trim());
 		configuration = new Configuration();
+		
 		return "";
 	}
 
 	public String call(String rpgProgram, String[] rpgParameters) throws Exception {
+		String returnValue = "";
 		jariko = RunnerKt.getProgram(rpgProgram, systemInterface, Arrays.asList(new DirRpgProgramFinder(rpgDir)));
-		if (null != rpgParameters && rpgParameters.length > 0) {
-			jariko.singleCall(Arrays.asList(rpgParameters), configuration);
-		} else {
-			jariko.singleCall(Arrays.asList(""), configuration);
+
+		List<String> parameters = Arrays.asList(rpgParameters);
+		
+		// Retrieve 'by-reference' parameters
+		parameters = jariko.singleCall(parameters, configuration).getParmsList();
+		for(int i=0; i<parameters.size(); i++) {
+			rpgParameters[i] = parameters.get(i);
 		}
+		
 		List<String> results = ((JavaSystemInterface) systemInterface).getConsoleOutput();
 		if (results.size() > 0) {
-			return results.get(results.size()-1).toString();	
-		} else {
-			return "";
+			returnValue = results.get(results.size()-1).toString();	
 		}
+		
+		return returnValue;
 	}
 
 }

@@ -3,7 +3,8 @@
       * Sample rpgle program to calculate Fibonacci series.
       *
       *--------------------------------------------------------------*
-     D PPDAT           S              8
+     D PPNUM1          S              8
+     D PPNUM2          S              8
      D NBR             S             21  0 
      D RESULT          S             21  0 
      D COUNT           S             21  0 
@@ -14,9 +15,12 @@
       *--------------------------------------------------------------*
       *
      C     *ENTRY        PLIST
-     C                   PARM                    PPDAT                          
+     C                   PARM                    PPNUM1 
+     C                   PARM                    PPNUM2                          
       *
-     C                   EVAL      NBR = %DEC(PPDAT:8:0)
+      * Fibonacci of PPNUM1
+     C                   EVAL      RESULT=0
+     C                   EVAL      NBR = %DEC(PPNUM1:8:0)
       *
      C                   IF        NBR = 1
      C                   EVAL      RESULT = 1
@@ -28,8 +32,9 @@
      C                   ENDFOR
      C                   ENDIF
       *
-     C                   EVAL      PPDAT=%TRIM(%CHAR(RESULT))
-     C     PPDAT         DSPLY
+     C     RESULT        DSPLY
+      *
+     C                   EVAL      PPNUM2=%TRIM(%CHAR(RESULT))
       *
      C                   SETON                                        LR
       *--------------------------------------------------------------*
