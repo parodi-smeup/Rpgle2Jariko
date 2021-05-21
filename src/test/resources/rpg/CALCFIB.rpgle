@@ -28,7 +28,8 @@
      C                   ENDFOR
      C                   ENDIF
       *
-     C     RESULT        DSPLY
+     C                   EVAL      PPDAT=%TRIM(%CHAR(RESULT))
+     C     PPDAT         DSPLY
       *
      C                   SETON                                        LR
       *--------------------------------------------------------------*

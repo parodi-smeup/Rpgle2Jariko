@@ -11,6 +11,21 @@ uses java classes.
 
 **JARIKORPGC (the main rpg caller program)**
 ```sh
+
+      *----------------------------------------------------------------*
+      * Program flow
+      * 1. call 'JARIKORPG.rpgle' to initialize/instantiate environments
+      *    and java needed objects.
+      * 2. call 'JARIKORPG.rpgle' to setup attributes for 'in-memory'
+      *    java objects previously istantiated.
+      * 3. call 'JARIKORPG.rpgle' to run 'HELLO.rpgle' by java intepreter.
+      * 4. call 'JARIKORPG.rpgle' to run 'CALCFIB.rpgle' by java intepreter.
+      * 5. call 'JARIKORPG.rpgle' to run 'DIVBY0.rpgle' by java intepreter
+      *    needed to generate a RuntimeException.
+      * 6. call 'JARIKORPG.rpgle' to run 'HELLO.rpgle' by java intepreter
+      *    to be sure that jvm is enable to run java programs again.
+      * 7. call 'JARIKORPG.rpgle' to run 'CALCFIB.rpgle' by java intepreter
+      *    to be sure that jvm is enable to run java programs again.
       *----------------------------------------------------------------*
       * Main                                                           *
       *----------------------------------------------------------------*
@@ -20,7 +35,16 @@ uses java classes.
      D p_rpgPgm        s            128
      D p_rpgParms      s             10    dim(5)
      D p_result        s            100
+     D p_errorCode     s             10
       *----------------------------------------------------------------*
+     D log             s           1000    dim(9999)
+     D logIdx          s              5  0 inz(1)
+      *----------------------------------------------------------------*
+      *
+      * .Enable/Disable collecting log (50=*OFF -> disable)
+     C                   SETON                                          50
+      * .Enable/Disable dsply result (51=*OFF -> disable)
+     C                   SETOFF                                         51
       *
       * Initialize (start jvm and create any needed class instances)
      C                   eval      p_function = 'INITIALIZE'
@@ -29,8 +53,8 @@ uses java classes.
      C                   eval      p_rpgPgm = ''
      C                   eval      p_rpgParms = ''
      C                   eval      p_result = ''
+     C                   eval      p_errorCode = ''
      C                   exsr      $callPgm
-     C                   exsr      $showResults
       *
       * Setup
      C                   eval      p_function = 'SETUP'
@@ -39,8 +63,8 @@ uses java classes.
      C                   eval      p_rpgPgm = ''
      C                   eval      p_rpgParms = ''
      C                   eval      p_result = ''
+     C                   eval      p_errorCode = ''
      C                   exsr      $callPgm
-     C                   exsr      $showResults
       *
       * Call rpg program HELLO.rpgle
      C                   eval      p_function = 'CALL'
@@ -49,8 +73,8 @@ uses java classes.
      C                   eval      p_rpgPgm = 'HELLO.rpgle'
      C                   eval      p_rpgParms = ''
      C                   eval      p_result = ''
+     C                   eval      p_errorCode = ''
      C                   exsr      $callPgm
-     C                   exsr      $showResults
       *
       * Call rpg program CALCFIB.rpgle to calculate Fibonacci's of 15.
      C                   eval      p_function = 'CALL'
@@ -59,18 +83,38 @@ uses java classes.
      C                   eval      p_rpgPgm = 'CALCFIB.rpgle'
      C                   eval      p_rpgParms(1) = '15'
      C                   eval      p_result = ''
+     C                   eval      p_errorCode = ''
      C                   exsr      $callPgm
-     C                   exsr      $showResults
       *
-      * Call rpg program DIVBY0.rpgle to thrown exception.
+      * Call rpg program DIVBY0.rpgle to thrown a runtime exception.
      C                   eval      p_function = 'CALL'
      C                   eval      p_interopPkg = ''
      C                   eval      p_rpgDir = ''
      C                   eval      p_rpgPgm = 'DIVBY0.rpgle'
      C                   eval      p_rpgParms = ''
      C                   eval      p_result = ''
+     C                   eval      p_errorCode = ''
      C                   exsr      $callPgm
-     C                   exsr      $showResults
+      *
+      * Call rpg program HELLO.rpgle
+     C                   eval      p_function = 'CALL'
+     C                   eval      p_interopPkg = ''
+     C                   eval      p_rpgDir = ''
+     C                   eval      p_rpgPgm = 'HELLO.rpgle'
+     C                   eval      p_rpgParms = ''
+     C                   eval      p_result = ''
+     C                   eval      p_errorCode = ''
+     C                   exsr      $callPgm
+      *
+      * Call rpg program CALCFIB.rpgle to calculate Fibonacci's of 11.
+     C                   eval      p_function = 'CALL'
+     C                   eval      p_interopPkg = ''
+     C                   eval      p_rpgDir = ''
+     C                   eval      p_rpgPgm = 'CALCFIB.rpgle'
+     C                   eval      p_rpgParms(1) = '11'
+     C                   eval      p_result = ''
+     C                   eval      p_errorCode = ''
+     C                   exsr      $callPgm
       *
       * Terminate
      C                   eval      p_function = 'TERMINATE'
@@ -79,8 +123,8 @@ uses java classes.
      C                   eval      p_rpgPgm = ''
      C                   eval      p_rpgParms = ''
      C                   eval      p_result = ''
+     C                   eval      p_errorCode = ''
      C                   exsr      $callPgm
-     C                   exsr      $showResults
       *
      C                   seton                                        lr
       *----------------------------------------------------------------*
@@ -95,6 +139,37 @@ uses java classes.
      C                   parm                    p_rpgPgm
      C                   parm                    p_rpgParms
      C                   parm                    p_result
+     C                   parm                    p_errorCode
+      *
+     C                   exsr      $collectLog
+     C                   exsr      $showResults
+      *
+     C                   endsr
+      *----------------------------------------------------------------*
+      * Collect log
+      *----------------------------------------------------------------*
+     C     $collectLog   begsr
+      *
+     C                   if        *in50=*off
+     C                   leavesr
+     C                   endif
+      *
+     C                   clear                   parmsAsString   200
+     C                   do        5             x                 1 0
+     C                   eval      parmsAsString=%trim(parmsAsString) +
+     C                                           '('+%char(x)+')'+
+     C                                           %trim(p_rpgParms(x))+','
+     C                   enddo
+      *
+     C                   eval      log(logIdx)=
+     C                              'p_function=' + %trim(p_function) +
+     C                              ',  p_interopPkg=' + %trim(p_interopPkg) +
+     C                              ',  p_rpgDir=' + %trim(p_rpgDir) +
+     C                              ',  p_rpgPgm=' + %trim(p_rpgPgm) +
+     C                              ',  p_rpgParms=' + %trim(parmsAsString) +
+     C                              ',  p_result=' + %trim(p_result) +
+     C                              ',  p_errorCode=' + %trim(p_errorCode)
+     C                   eval      logIdx+=1
       *
      C                   endsr
       *----------------------------------------------------------------*
@@ -102,28 +177,40 @@ uses java classes.
       *----------------------------------------------------------------*
      C     $showResults  begsr
       *
+     C                   if        *in51=*off
+     C                   leavesr
+     C                   endif
+      *
      C                   clear                   toDsply          52
       *
+     C                   if        p_errorCode <> ''
+     C                   eval      toDsply='['+%trim(p_function)+'] '+
+     C                                     %trim(p_result) +
+     C                                     '['+%trim(p_errorCode)+']'
+     C                   else
      C                   eval      toDsply='['+%trim(p_function)+'] '+
      C                                     %trim(p_result)
+     C                   endif
       *
      C     toDsply       dsply
       *
      C                   endsr
       *----------------------------------------------------------------*
+
 ```
 
 **JARICORPG.rpgle (uses java classes from its internal)**
 ```sh
+
       * ALWNULL(*YES)
      H THREAD(*SERIALIZE)
    COP* DFTACTGRP(*NO)
       *----------------------------------------------------------------
      D rmvvar          s            100    dim(100) ctdata perrcd(1)
      D jars            s            100    dim(100) ctdata perrcd(1)
-     D addvar          s            100    dim(100) ctdata perrcd(1)
+     D addvar_1        s            100    dim(100) ctdata perrcd(1)
+     D addvar_2        s            100    dim(100) ctdata perrcd(1)
      D prop            s            100    dim(100) ctdata perrcd(1)
-     D result          S            100a   varying
       *----------------------------------------------------------------
      D p_function      s             10
      D p_interopPkg    s            128
@@ -131,6 +218,9 @@ uses java classes.
      D p_rpgPgm        s            128
      D p_rpgParms      s             10    dim(5)
      D p_result        s            100
+     D p_errorCode     s             10
+      *----------------------------------------------------------------
+     D result          s            100a   varying
       *----------------------------------------------------------------
      D Jrpgle          s               O   Class(*JAVA:
      D                                     'com.smeup.connector.Jrpgle')
@@ -175,7 +265,8 @@ uses java classes.
       *
      D rpgParms        s               O   Class(*JAVA:'java.lang.String')
      D                                     DIM(5)
-      *
+      *----------------------------------------------------------------*
+      /COPY QILEGEN,£PDSQQ
       *----------------------------------------------------------------*
       * Main                                                           *
       *----------------------------------------------------------------*
@@ -187,8 +278,9 @@ uses java classes.
      C                   parm                    p_rpgPgm
      C                   parm                    p_rpgParms
      C                   parm                    p_result
+     C                   parm                    p_errorCode
       *
-     C*****              monitor
+     C                   monitor
      C                   select
       * .initialize
      C                   when      p_function = 'INITIALIZE'
@@ -209,10 +301,10 @@ uses java classes.
      C                                        'not allowed'
      C                   endsl
       * .monitoring exceptions
-     C***                on-error
-     C***                eval      p_result = 'ERROR'
-     C***                exsr      $terminate
-     C***                endmon
+     C                   on-error
+     C                   eval      p_result = ''
+     C                   eval      p_errorCode = £QDSMI
+     C                   endmon
       *
      C   55              seton                                        rt
      C  n55              seton                                        lr
@@ -252,14 +344,27 @@ uses java classes.
      C                   parm                    jcmd
      C                   parm                    cmdLen
      C   37              goto      endrout
-      * addvar
+      * addvar_1
      C*                  clear                   jcmd
      C*                  z-add     0             i
      C*                  do        50            i
-     C*                  if        %trim(addvar(i))=''
+     C*                  if        %trim(addvar_1(i))=''
      C*                  leave
      C*                  endif
-     C*                  eval      jcmd=%trim(jcmd)+%trim(addvar(i))
+     C*                  eval      jcmd=%trim(jcmd)+%trim(addvar_1(i))
+     C*                  enddo
+     C*                  call      'QCMDEXC'                            37
+     C*                  parm                    jcmd
+     C*                  parm                    cmdLen
+     C*  37              goto      endrout
+      * addvar_2
+     C*                  clear                   jcmd
+     C*                  z-add     0             i
+     C*                  do        50            i
+     C*                  if        %trim(addvar_2(i))=''
+     C*                  leave
+     C*                  endif
+     C*                  eval      jcmd=%trim(jcmd)+%trim(addvar_2(i))
      C*                  enddo
      C*                  call      'QCMDEXC'                            37
      C*                  parm                    jcmd
@@ -278,13 +383,13 @@ uses java classes.
      C                   parm                    jcmd
      C                   parm                    cmdLen
      C   37              goto      endrout
-      * classe instance
+      * class instance
      C                   eval      Jrpgle=newJrpgle()
       *
      C     endrout       tag
      C                   if        *in37 or Jrpgle=*null
-     C                   eval      p_result='ERROR'
-     C                   setoff                                       55
+     C                   eval      p_result=''
+     C                   eval      p_errorCode='N/D'
      C                   endif
       *
      C                   endsr
@@ -293,7 +398,6 @@ uses java classes.
       *----------------------------------------------------------------*
      C     $setup        begsr
       *
-     C                   seton                                        55
      C                   eval      interopPkg =
      C                                newString(%trim(p_interopPkg))
      C                   eval      rpgDir =
@@ -312,7 +416,6 @@ uses java classes.
       *----------------------------------------------------------------*
      C     $call         begsr
       *
-     C                   seton                                        55
       * .rpg program to call
      C                   eval      rpgPgm = newString(%trim(p_rpgPgm))
       * .rpg program parameters
@@ -341,18 +444,24 @@ uses java classes.
 ** rmvvar
 RMVENVVAR ENVVAR(CLASSPATH)
 RMVENVVAR ENVVAR(QIBM_USE_DESCRIPTOR_STDIO)
+RMVENVVAR ENVVAR(QIBM_RPG_JAVA_EXCP_TRACE)
 RMVENVVAR ENVVAR(QIBM_RPG_JAVA_PROPERTIES)
 ** jars
 ADDENVVAR ENVVAR(CLASSPATH) VALUE('
 /smedoc/jariko400/lib/Rpgle2Jariko.jar:
 /smedoc/jariko400/lib/rpgJavaInterpreter-core-all.jar:
 ') REPLACE(*YES)
-** addvar
+** addvar_1
 ADDENVVAR ENVVAR(QIBM_USE_DESCRIPTOR_STDIO) VALUE('
+Y
+') REPLACE(*YES)
+** addvar_2
+ADDENVVAR ENVVAR(QIBM_RPG_JAVA_EXCP_TRACE) VALUE('
 Y
 ') REPLACE(*YES)
 ** prop
 ADDENVVAR ENVVAR(QIBM_RPG_JAVA_PROPERTIES) VALUE('
 -Djava.version=1.8;
 ') REPLACE(*YES)
+
 ```
