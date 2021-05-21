@@ -77,11 +77,13 @@ uses java classes.
      C                   exsr      $callPgm
       *
       * Call rpg program CALCFIB.rpgle to calculate Fibonacci's of 15.
+      * Expected change of 2nd parameter value from '25' to '610' by called.
      C                   eval      p_function = 'CALL'
      C                   eval      p_interopPkg = ''
      C                   eval      p_rpgDir = ''
      C                   eval      p_rpgPgm = 'CALCFIB.rpgle'
      C                   eval      p_rpgParms(1) = '15'
+     C                   eval      p_rpgParms(2) = '25'
      C                   eval      p_result = ''
      C                   eval      p_errorCode = ''
      C                   exsr      $callPgm
@@ -221,6 +223,7 @@ uses java classes.
      D p_errorCode     s             10
       *----------------------------------------------------------------
      D result          s            100a   varying
+     D resultParms     s             10a   dim(5) varying
       *----------------------------------------------------------------
      D Jrpgle          s               O   Class(*JAVA:
      D                                     'com.smeup.connector.Jrpgle')
@@ -428,6 +431,13 @@ uses java classes.
      C                                           rpgPgm:
      C                                           rpgParms)
      C                   eval      result = getBytes(string)
+      *
+      * .get new parameters values (due to by-reference behaviour)
+     C                   do        5             i
+     C                   eval      resultParms(i) =
+     C                                 getBytes(rpgParms(i))
+     C                   enddo
+      *
      C                   movel(p)  result        p_result
       *
      C                   endsr
